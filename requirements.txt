@@ -1,3 +1,5 @@
 pandas==2.3.3
 ib_async==2.0.1
 rx==3.2.0
+nest_asyncio==1.6.0
+pytz==2025.2
