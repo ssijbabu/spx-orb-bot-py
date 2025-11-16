@@ -2,8 +2,9 @@ import asyncio
 import time
 import datetime as dt
 import pytz
-from ib_async import IB, RealTimeBar
-from ib_async.contract import Index
+from ib_async import IB
+from ib_async.contract import Index, Option, Contract, ComboLeg
+from ib_async.order import Order
 
 # ============================================================
 # CONFIGURATION
@@ -100,6 +101,8 @@ async def wait_for_market_open():
 
             if remaining <= 0:
                 break
+            
+            option = Option()
 
             # Show progress every minute
             if int(remaining) % 60 == 0:
@@ -113,6 +116,30 @@ async def wait_for_market_open():
         raise
 
     print(f"[{now()}] ✅ Market open time reached.")
+
+# ============================================================
+# OPENING RANGE FETCH WITH RETRY
+# ============================================================
+async def fetch_opening_range_with_retry(max_retries, retry_delay):
+    """Retry wrapper for fetch_opening_range()"""
+    attempts = 0
+
+    while attempts < max_retries:
+        try:
+            await fetch_opening_range()
+            return  # SUCCESS → exit retry function
+        except Exception as e:
+            attempts += 1
+            print(f"[{now()}] ❌ fetch_opening_range() failed "
+                  f"(attempt {attempts}/{max_retries}): {e}")
+
+            if attempts >= max_retries:
+                print(f"[{now()}] 💥 All {max_retries} attempts failed. Exiting program.")
+                raise  # RAISE to stop program
+
+            print(f"[{now()}] ⏳ Retrying in {retry_delay} seconds...")
+            await asyncio.sleep(retry_delay)
+
 
 # ============================================================
 # HISTORICAL OPENING RANGE
@@ -233,7 +260,8 @@ async def main():
 
     try:
         await wait_for_market_open()
-        await fetch_opening_range()
+
+        await fetch_opening_range_with_retry(5,1)
 
         monitor_task = asyncio.create_task(monitor_with_breakout())
         await monitor_task
