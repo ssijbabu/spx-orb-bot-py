@@ -102,8 +102,6 @@ async def wait_for_market_open():
             if remaining <= 0:
                 break
             
-            option = Option()
-
             # Show progress every minute
             if int(remaining) % 60 == 0:
                 print(f"[{now()}] ⏳ {int(remaining // 60)} min left...")
